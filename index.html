@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool Bốc Thăm Chia Bảng</title>
+<style>
+    *{box-sizing:border-box}
+    body{
+        margin:0;font-family:Arial,Helvetica,sans-serif;
+        background:linear-gradient(135deg,#f4f7ff,#eef2ff);
+        color:#172033;min-height:100vh;padding:30px 16px
+    }
+    .container{max-width:1100px;margin:auto}
+    h1{text-align:center;margin:0 0 8px;font-size:32px}
+    .subtitle{text-align:center;color:#667085;margin-bottom:28px;font-size:14px}
+    .card{
+        background:#fff;border-radius:18px;padding:24px;
+        box-shadow:0 10px 30px rgba(16,24,40,.08);margin-bottom:20px
+    }
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+    h2{font-size:20px;margin:0 0 16px}
+    .row{display:flex;gap:10px;margin-bottom:10px;align-items:center}
+    .row span.idx{
+        flex:0 0 auto;width:38px;height:42px;display:flex;align-items:center;justify-content:center;
+        background:#eef2ff;border-radius:10px;font-weight:700;color:#3949ab
+    }
+    input{
+        flex:1;min-width:0;border:1px solid #d0d5dd;border-radius:10px;padding:11px 13px;
+        font-size:15px;outline:none
+    }
+    input:focus{border-color:#5964e0;box-shadow:0 0 0 3px rgba(89,100,224,.12)}
+    .del-row{
+        flex:0 0 auto;width:38px;height:42px;border-radius:10px;border:0;
+        background:#fee2e2;color:#b42318;font-weight:700;font-size:16px;line-height:1;
+        cursor:pointer
+    }
+    .del-row:hover{background:#fecaca}
+    .del-row:disabled{opacity:.5;cursor:not-allowed}
+    .add-row{
+        display:block;width:100%;margin-top:2px;background:transparent;
+        border:1.5px dashed #a5aefc;color:#4f46e5;border-radius:10px;
+        padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer
+    }
+    .add-row:hover{background:#f5f6ff}
+    .add-row:disabled{opacity:.5;cursor:not-allowed}
+    .actions{text-align:center;margin:22px 0}
+    button.primary,button.secondary{
+        border:0;border-radius:11px;padding:12px 22px;font-size:16px;
+        font-weight:700;cursor:pointer;margin:5px
+    }
+    .primary{background:#4f46e5;color:#fff}
+    .primary:hover{background:#4338ca}
+    .secondary{background:#eef2ff;color:#3730a3}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .draw-box{display:none;text-align:center}
+    .draw-title{font-size:18px;color:#667085;margin-bottom:8px}
+    .drawing{
+        font-size:32px;font-weight:800;min-height:52px;
+        display:flex;align-items:center;justify-content:center;
+        color:#4f46e5;text-align:center
+    }
+    .result-grid{
+        display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:20px
+    }
+    .result{
+        border:1px solid #e4e7ec;border-radius:14px;padding:16px;text-align:left;
+        background:#fafbff;min-height:130px
+    }
+    .result .group-name{
+        font-weight:800;color:#4f46e5;font-size:17px;margin-bottom:12px;text-align:center;
+        padding-bottom:8px;border-bottom:1px dashed #d8ddf2
+    }
+    .result .seed-item{
+        background:#eef2ff;color:#3730a3;border-radius:8px;padding:8px 10px;
+        margin-bottom:6px;font-weight:600;font-size:14px
+    }
+    .empty{color:#98a2b3}
+    .result .empty{display:block;text-align:center;padding:8px 0}
+    .notice{text-align:center;color:#667085;margin-top:14px;font-size:14px}
+    @media(max-width:800px){
+        .grid{grid-template-columns:1fr}
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>🎲 Bốc Thăm Chia Bảng</h1>
+    <div class="subtitle">Ngẫu nhiên chia các hạt giống vào các bảng/nhóm bốc thăm. Cho phép trùng tên, số lượng 2 bên không cần bằng nhau — một bảng có thể nhận nhiều hạt giống.</div>
+
+    <div class="card">
+        <div class="grid">
+            <section>
+                <h2>🏆 Hạt giống</h2>
+                <div id="seeds"></div>
+                <button class="add-row" id="addSeedBtn" onclick="addRow('seeds','Hạt giống')">+ Thêm hạt giống</button>
+            </section>
+            <section>
+                <h2>🗂️ Bảng / Người bốc thăm</h2>
+                <div id="drawers"></div>
+                <button class="add-row" id="addDrawerBtn" onclick="addRow('drawers','Bảng')">+ Thêm bảng / người bốc</button>
+            </section>
+        </div>
+
+        <div class="actions">
+            <button class="primary" id="drawBtn" onclick="startDraw()">🎲 Bắt đầu bốc thăm</button>
+            <button class="secondary" onclick="resetAll()">↻ Làm lại</button>
+        </div>
+
+        <div class="draw-box" id="drawBox">
+            <div class="draw-title" id="drawTitle">Đang bốc...</div>
+            <div class="drawing" id="drawing">?</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📋 Kết quả chia bảng</h2>
+        <div class="result-grid" id="results"></div>
+        <div class="notice">Mỗi hạt giống được bốc ngẫu nhiên vào 1 bảng. Một bảng có thể nhận nhiều hơn 1 hạt giống nếu số hạt giống nhiều hơn số bảng.</div>
+    </div>
+</div>
+
+<script>
+const results = document.getElementById('results');
+const drawBox = document.getElementById('drawBox');
+const drawing = document.getElementById('drawing');
+const drawTitle = document.getElementById('drawTitle');
+const drawBtn = document.getElementById('drawBtn');
+
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, m => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+    }[m]));
+}
+
+// Tạo 1 hàng input mới trong container (id = 'seeds' hoặc 'drawers')
+function addRow(containerId, placeholder, defaultValue) {
+    const container = document.getElementById(containerId);
+    const nextIndex = container.querySelectorAll('.row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+        <span class="idx">${nextIndex}</span>
+        <input value="${escapeHtml(defaultValue !== undefined ? defaultValue : placeholder + ' ' + nextIndex)}" maxlength="50">
+        <button type="button" class="del-row" title="Xóa hàng" onclick="removeRow(this,'${containerId}')">✕</button>
+    `;
+    container.appendChild(row);
+}
+
+function removeRow(btn, containerId) {
+    const row = btn.closest('.row');
+    row.remove();
+    renumber(containerId);
+}
+
+function renumber(containerId) {
+    const container = document.getElementById(containerId);
+    Array.from(container.querySelectorAll('.row')).forEach((row, i) => {
+        row.querySelector('.idx').textContent = i + 1;
+    });
+}
+
+function createInputs(containerId, placeholder, count) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    for (let i = 1; i <= count; i++) {
+        addRow(containerId, placeholder, `${placeholder} ${i}`);
+    }
+}
+
+// Mặc định 8 hạt giống và 2 bảng (A, B) — có thể thêm/xóa tự do
+createInputs('seeds', 'Hạt giống', 8);
+createInputs('drawers', 'Bảng', 2);
+// Đặt sẵn tên "Bảng A", "Bảng B" cho 2 hàng mặc định
+(function setDefaultGroupNames(){
+    const inputs = document.querySelectorAll('#drawers input');
+    const letters = ['A','B','C','D','E','F','G','H'];
+    inputs.forEach((inp, i) => { inp.value = 'Bảng ' + (letters[i] || (i+1)); });
+})();
+
+function getValues(containerId) {
+    return Array.from(document.querySelectorAll(`#${containerId} input`)).map(x => x.value.trim());
+}
+
+function shuffle(array) {
+    const a = [...array];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function renderEmpty() {
+    const seeds = getValues('seeds').filter(x => x);
+    const groups = getValues('drawers').filter(x => x);
+    if (groups.length === 0) {
+        results.innerHTML = '<div class="notice">Hãy nhập ít nhất 1 bảng / người bốc thăm.</div>';
+        return;
+    }
+    results.innerHTML = groups.map(g => `
+        <div class="result">
+            <div class="group-name">${escapeHtml(g)}</div>
+            <div class="empty">Chưa bốc</div>
+        </div>`).join('');
+}
+renderEmpty();
+
+function setControlsDisabled(disabled) {
+    document.querySelectorAll('#seeds input, #drawers input, .del-row, .add-row').forEach(x => x.disabled = disabled);
+    drawBtn.disabled = disabled;
+}
+
+async function startDraw() {
+    // Bỏ qua các ô để trống, cho phép nhập trùng tên
+    const seeds = getValues('seeds').filter(x => x);
+    const groups = getValues('drawers').filter(x => x);
+
+    if (seeds.length < 1) { alert('Vui lòng nhập ít nhất 1 hạt giống.'); return; }
+    if (groups.length < 1) { alert('Vui lòng nhập ít nhất 1 bảng / người bốc thăm.'); return; }
+
+    setControlsDisabled(true);
+    drawBox.style.display = 'block';
+
+    // Random thứ tự hạt giống được bốc, rồi chia đều lần lượt vào các bảng (round-robin)
+    // => Số lượng 2 bên không cần bằng nhau, 1 bảng có thể nhận nhiều hạt giống.
+    const seedDrawOrder = shuffle(seeds.map((_, i) => i)); // thứ tự index hạt giống sẽ bốc
+    const assignment = new Array(seeds.length); // assignment[seedIdx] = groupIdx
+    seedDrawOrder.forEach((seedIdx, i) => {
+        assignment[seedIdx] = i % groups.length;
+    });
+
+    const groupContents = groups.map(() => []); // seed names theo từng bảng, tích lũy dần
+
+    renderGroups(groups, groupContents);
+
+    for (let i = 0; i < seedDrawOrder.length; i++) {
+        const seedIdx = seedDrawOrder[i];
+        const seedName = seeds[seedIdx];
+        const groupIdx = assignment[seedIdx];
+        const groupName = groups[groupIdx];
+
+        drawTitle.textContent = `Đang bốc "${seedName}"...`;
+
+        // Hiệu ứng quay tên bảng
+        for (let k = 0; k < 10; k++) {
+            drawing.textContent = groups[Math.floor(Math.random() * groups.length)];
+            await sleep(90);
+        }
+        drawing.textContent = `→ ${groupName}`;
+        await sleep(650);
+
+        groupContents[groupIdx].push(seedName);
+        renderGroups(groups, groupContents);
+    }
+
+    drawTitle.textContent = '🎉 Hoàn tất!';
+    drawing.textContent = 'Đã bốc xong';
+    setControlsDisabled(false);
+}
+
+function renderGroups(groups, groupContents) {
+    results.innerHTML = groups.map((g, i) => {
+        const items = groupContents[i];
+        const body = items.length
+            ? items.map(s => `<div class="seed-item">${escapeHtml(s)}</div>`).join('')
+            : `<div class="empty">Chưa bốc</div>`;
+        return `
+        <div class="result">
+            <div class="group-name">${escapeHtml(g)}</div>
+            ${body}
+        </div>`;
+    }).join('');
+}
+
+function resetAll() {
+    drawBox.style.display = 'none';
+    drawing.textContent = '?';
+    drawTitle.textContent = 'Đang bốc...';
+    setControlsDisabled(false);
+    renderEmpty();
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+</script>
+</body>
+</html>
